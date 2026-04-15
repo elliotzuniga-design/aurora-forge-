@@ -6,6 +6,7 @@ import { healthRoutes } from "./routes/health.js";
 import { memoryRoutes } from "./routes/memory.js";
 import { agentRoutes } from "./routes/agents.js";
 import { registerPushToken } from "./services/push.js";
+import { startScheduler } from "./services/scheduler.js";
 import type { FastifyRequest, FastifyReply } from "fastify";
 
 const PORT = parseInt(process.env.PORT || "3001", 10);
@@ -95,6 +96,9 @@ async function main(): Promise<void> {
 ║                                                  ║
 ╚══════════════════════════════════════════════════╝
     `);
+
+    // Start the scheduler (agents + reminders)
+    startScheduler();
   } catch (err) {
     app.log.error(err);
     process.exit(1);

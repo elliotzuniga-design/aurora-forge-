@@ -1,7 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { Tool, MessageParam, ContentBlock } from "@anthropic-ai/sdk/resources/messages.js";
 import { getFirestore } from "../middleware/auth.js";
-import { searchMemories } from "./memory.js";
+import { searchMemories, addMemory } from "./memory.js";
+import { getWeather } from "./weather.js";
+import { searchWeb } from "./search.js";
 import type {
   ConversationMessage,
   ToolUseRecord,
@@ -118,9 +120,40 @@ const AURORA_TOOLS: Tool[] = [
       required: ["query"],
     },
   },
+  {
+    name: "add_memory",
+    description:
+      "Store an important fact, event, preference, or insight about the user for long-term recall.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        content: {
+          type: "string",
+          description: "The memory to store (clear, standalone sentence)",
+        },
+        type: {
+          type: "string",
+          enum: ["episodic", "semantic", "procedural", "working"],
+          description:
+            "Memory type: episodic (events), semantic (facts), procedural (preferences/patterns), working (current context)",
+        },
+        importance: {
+          type: "number",
+          description: "Importance 1-10 (personal info=9, goals=8, preferences=6, events=5, trivial=1)",
+        },
+        topics: {
+          type: "array",
+          items: { type: "string" },
+          description:
+            "Topic tags from: health, family, work, finances, goals, projects, sports, home, personal",
+        },
+      },
+      required: ["content", "type", "importance"],
+    },
+  },
 ];
 
-// ─── Tool Execution (stubs — Phase 4 fills these in) ───────────
+// ─── Tool Execution ───────────────────────────────────────────
 
 async function executeTool(
   toolName: string,
@@ -129,9 +162,10 @@ async function executeTool(
 ): Promise<string> {
   switch (toolName) {
     case "get_calendar_events":
+      // Calendar integration coming in Phase 3 (Google Calendar OAuth)
       return JSON.stringify({
         events: [],
-        note: "Calendar integration pending — connect Google Calendar in Phase 4",
+        note: "Calendar integration pending — connect Google Calendar in Phase 3",
       });
 
     case "send_message":
@@ -149,8 +183,7 @@ async function executeTool(
       return JSON.stringify(results);
     }
 
-    case "set_reminder":
-      // Store reminder in Firestore for the scheduled push service to pick up
+    case "set_reminder": {
       const db = getFirestore();
       await db
         .collection("users")
@@ -163,18 +196,25 @@ async function executeTool(
           sent: false,
         });
       return JSON.stringify({ status: "set", datetime: input.datetime });
+    }
 
     case "get_weather":
-      return JSON.stringify({
-        location: input.location,
-        note: "Weather API integration pending — connect in Phase 4",
-      });
+      return getWeather(input.location as string);
 
     case "search_web":
-      return JSON.stringify({
-        query: input.query,
-        note: "Web search integration pending — connect Serper API in Phase 4",
-      });
+      return searchWeb(input.query as string);
+
+    case "add_memory": {
+      const memId = await addMemory(
+        uid,
+        input.content as string,
+        (input.type as string) as "episodic" | "semantic" | "procedural" | "working",
+        (input.importance as number) || 5,
+        (input.topics as string[]) || [],
+        "conversation"
+      );
+      return JSON.stringify({ status: "stored", memoryId: memId });
+    }
 
     default:
       return JSON.stringify({ error: `Unknown tool: ${toolName}` });

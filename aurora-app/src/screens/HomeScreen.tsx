@@ -16,9 +16,13 @@ import { VoiceButton } from "../components/VoiceButton";
 import { ThinkingIndicator } from "../components/ThinkingIndicator";
 import { useConversation } from "../hooks/useConversation";
 import { useVoice } from "../hooks/useVoice";
+import { useNavigation } from "@react-navigation/native";
+import type { StackNavigationProp } from "@react-navigation/stack";
 import type { Message } from "../store/conversationStore";
+import type { RootStackParamList } from "../../App";
 
 export function HomeScreen() {
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const {
     messages,
     isThinking,
@@ -77,6 +81,12 @@ export function HomeScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
       <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => navigation.navigate("Conversations")}
+          style={styles.historyButton}
+        >
+          <Text style={styles.historyText}>History</Text>
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>AURORA</Text>
         <TouchableOpacity
           onPress={startNewConversation}
@@ -181,6 +191,17 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: colors.primary,
     letterSpacing: 3,
+  },
+  historyButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  historyText: {
+    fontSize: 13,
+    color: colors.textMuted,
   },
   newChatButton: {
     paddingHorizontal: 12,

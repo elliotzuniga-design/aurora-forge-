@@ -6,6 +6,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
 
 import { HomeScreen } from "./src/screens/HomeScreen";
+import { ConversationsScreen } from "./src/screens/ConversationsScreen";
 import { SettingsScreen } from "./src/screens/SettingsScreen";
 import { MemoryScreen } from "./src/screens/MemoryScreen";
 import { AgentsScreen } from "./src/screens/AgentsScreen";
@@ -18,6 +19,7 @@ import { colors } from "./src/constants/colors";
 
 export type RootStackParamList = {
   Home: undefined;
+  Conversations: undefined;
   Settings: undefined;
   Memory: undefined;
   Agents: undefined;
@@ -46,6 +48,11 @@ function AppNavigator() {
       <Stack.Screen
         name="Home"
         component={HomeScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Conversations"
+        component={ConversationsScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen
