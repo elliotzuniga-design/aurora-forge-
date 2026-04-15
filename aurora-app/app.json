@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "AURORA",
+    "slug": "aurora-personal-ai",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#0A0A0F"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.elliot.aurora",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "AURORA uses the microphone for voice commands and speech-to-text.",
+        "NSSpeechRecognitionUsageDescription": "AURORA uses speech recognition to process your voice commands."
+      }
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#00D4AA"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "your-eas-project-id"
+      }
+    }
+  }
+}
