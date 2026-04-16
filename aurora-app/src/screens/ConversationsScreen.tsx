@@ -90,7 +90,7 @@ export function ConversationsScreen() {
 
         setConversationId(convo.id);
         setMessages(msgs);
-        navigation.navigate("Home");
+        navigation.navigate("MainTabs");
       } catch (err) {
         console.error("Failed to load conversation:", err);
       }
