@@ -4,6 +4,9 @@ import { getFirestore } from "../middleware/auth.js";
 import { searchMemories, addMemory } from "./memory.js";
 import { getWeather } from "./weather.js";
 import { searchWeb } from "./search.js";
+import { getCalendarEvents } from "./calendar.js";
+import { searchEmails } from "./email.js";
+import { getHealthData, getHealthRange, getHealthTrend } from "./health-query.js";
 import type {
   ConversationMessage,
   ToolUseRecord,
@@ -121,6 +124,95 @@ const AURORA_TOOLS: Tool[] = [
     },
   },
   {
+    name: "search_emails",
+    description:
+      "Search the user's Gmail inbox. Use Gmail search syntax (e.g., 'from:boss is:unread', 'subject:invoice after:2024/01/01').",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        query: {
+          type: "string",
+          description: "Gmail search query (supports Gmail search operators)",
+        },
+        max_results: {
+          type: "number",
+          description: "Max emails to return (default 15)",
+        },
+      },
+      required: ["query"],
+    },
+  },
+  {
+    name: "get_health_data",
+    description:
+      "Get the user's health metrics for a specific date or date range. Includes steps, heart rate, sleep, exercise, etc.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        date: {
+          type: "string",
+          description: "Single date (YYYY-MM-DD) for daily data",
+        },
+        start_date: {
+          type: "string",
+          description: "Start date for range query (YYYY-MM-DD)",
+        },
+        end_date: {
+          type: "string",
+          description: "End date for range query (YYYY-MM-DD)",
+        },
+        metric: {
+          type: "string",
+          description: "Optional: specific metric to trend (e.g. 'steps', 'sleepHours', 'heartRate')",
+        },
+        trend_days: {
+          type: "number",
+          description: "Optional: number of days to trend a specific metric (default 7)",
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "get_goals",
+    description:
+      "Get the user's life goals, milestones, and progress. Can filter by domain (health, family, financial, career, business, personal_growth, legacy).",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        domain: {
+          type: "string",
+          enum: ["health", "family", "financial", "career", "business", "personal_growth", "legacy"],
+          description: "Optional: filter goals by life domain",
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "update_goal",
+    description:
+      "Update a goal's progress, add milestones, or modify details.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        goal_id: {
+          type: "string",
+          description: "The goal ID to update",
+        },
+        progress: {
+          type: "number",
+          description: "New progress percentage (0-100)",
+        },
+        add_milestone: {
+          type: "string",
+          description: "Title of a new milestone to add",
+        },
+      },
+      required: ["goal_id"],
+    },
+  },
+  {
     name: "add_memory",
     description:
       "Store an important fact, event, preference, or insight about the user for long-term recall.",
@@ -162,11 +254,11 @@ async function executeTool(
 ): Promise<string> {
   switch (toolName) {
     case "get_calendar_events":
-      // Calendar integration coming in Phase 3 (Google Calendar OAuth)
-      return JSON.stringify({
-        events: [],
-        note: "Calendar integration pending — connect Google Calendar in Phase 3",
-      });
+      return getCalendarEvents(
+        uid,
+        input.start_date as string,
+        input.end_date as string
+      );
 
     case "send_message":
       return JSON.stringify({
@@ -203,6 +295,79 @@ async function executeTool(
 
     case "search_web":
       return searchWeb(input.query as string);
+
+    case "search_emails":
+      return searchEmails(
+        uid,
+        input.query as string,
+        (input.max_results as number) || 15
+      );
+
+    case "get_health_data": {
+      if (input.metric) {
+        return getHealthTrend(uid, input.metric as string, (input.trend_days as number) || 7);
+      }
+      if (input.start_date && input.end_date) {
+        return getHealthRange(uid, input.start_date as string, input.end_date as string);
+      }
+      const date = (input.date as string) || new Date().toISOString().split("T")[0];
+      return getHealthData(uid, date);
+    }
+
+    case "get_goals": {
+      const db = getFirestore();
+      let goalsQuery = db
+        .collection("users")
+        .doc(uid)
+        .collection("goals")
+        .orderBy("priority", "asc");
+
+      if (input.domain) {
+        goalsQuery = db
+          .collection("users")
+          .doc(uid)
+          .collection("goals")
+          .where("domain", "==", input.domain)
+          .orderBy("priority", "asc");
+      }
+
+      const goalsSnap = await goalsQuery.get();
+      const goals = goalsSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      return JSON.stringify({ goals, count: goals.length });
+    }
+
+    case "update_goal": {
+      const db = getFirestore();
+      const goalRef = db
+        .collection("users")
+        .doc(uid)
+        .collection("goals")
+        .doc(input.goal_id as string);
+
+      const goalDoc = await goalRef.get();
+      if (!goalDoc.exists) {
+        return JSON.stringify({ error: "Goal not found" });
+      }
+
+      const updates: Record<string, unknown> = { updatedAt: new Date() };
+      if (input.progress != null) {
+        updates.currentProgress = input.progress;
+      }
+      if (input.add_milestone) {
+        const existing = goalDoc.data()?.milestones || [];
+        updates.milestones = [
+          ...existing,
+          {
+            id: uuid(),
+            title: input.add_milestone,
+            completed: false,
+          },
+        ];
+      }
+
+      await goalRef.update(updates);
+      return JSON.stringify({ status: "updated", goalId: input.goal_id });
+    }
 
     case "add_memory": {
       const memId = await addMemory(

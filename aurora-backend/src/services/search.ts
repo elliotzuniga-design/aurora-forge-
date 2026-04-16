@@ -47,7 +47,11 @@ export async function searchWeb(query: string): Promise<string> {
       });
     }
 
-    const data = await res.json();
+    const data = (await res.json()) as {
+      organic?: SerperResult[];
+      answerBox?: { answer?: string; snippet?: string };
+      knowledgeGraph?: { title?: string; description?: string };
+    };
 
     const result: SearchResult = {
       query,

@@ -13,8 +13,16 @@ const DEFAULT_AGENTS: Omit<Agent, "lastRun" | "lastResult">[] = [
     description:
       "Pulls today's calendar, weather, pending tasks, and health data into a morning brief.",
     schedule: "0 6 * * *",
-    tools: ["get_calendar_events", "get_weather", "search_memory", "add_memory"],
-    systemPrompt: "Generate a concise morning briefing for Elliot.",
+    tools: [
+      "get_calendar_events",
+      "get_weather",
+      "get_health_data",
+      "get_goals",
+      "search_memory",
+      "add_memory",
+    ],
+    systemPrompt:
+      "Generate a concise morning briefing. Pull today's calendar, current weather, last night's sleep/health data, and any high-priority goals. Keep it actionable.",
     enabled: true,
   },
   {
@@ -22,8 +30,9 @@ const DEFAULT_AGENTS: Omit<Agent, "lastRun" | "lastResult">[] = [
     name: "Communication Monitor",
     description: "Scans for emails and messages that need response or action.",
     schedule: "*/30 8-20 * * *",
-    tools: ["search_web", "search_memory", "add_memory"],
-    systemPrompt: "Monitor communications and alert on important items.",
+    tools: ["search_emails", "search_memory", "add_memory"],
+    systemPrompt:
+      "Search the user's recent emails for anything that needs attention — urgent messages, pending replies, important updates. Summarize what needs action.",
     enabled: true,
   },
   {
@@ -42,8 +51,9 @@ const DEFAULT_AGENTS: Omit<Agent, "lastRun" | "lastResult">[] = [
     description:
       "Reviews open work orders, vendor responses, and project deadlines.",
     schedule: "0 7 * * MON",
-    tools: ["search_web", "search_memory", "get_calendar_events", "add_memory"],
-    systemPrompt: "Generate a weekly operations summary for Pen Factory work.",
+    tools: ["search_emails", "search_memory", "get_calendar_events", "add_memory"],
+    systemPrompt:
+      "Generate a weekly Pen Factory operations summary. Check emails for vendor replies and work order updates, review this week's calendar for deadlines, and pull relevant context from memory.",
     enabled: true,
   },
   {
@@ -62,8 +72,9 @@ const DEFAULT_AGENTS: Omit<Agent, "lastRun" | "lastResult">[] = [
     description:
       "Reviews daily health data and provides end-of-day health insights.",
     schedule: "0 21 * * *",
-    tools: ["search_memory", "add_memory"],
-    systemPrompt: "Analyze today's health data and provide insights.",
+    tools: ["get_health_data", "search_memory", "add_memory"],
+    systemPrompt:
+      "Pull today's health data and the past 7-day trend for key metrics (steps, sleep, heart rate, exercise). Compare to previous patterns in memory. Highlight anything notable — improvements, concerns, or patterns.",
     enabled: true,
   },
   {
@@ -72,8 +83,9 @@ const DEFAULT_AGENTS: Omit<Agent, "lastRun" | "lastResult">[] = [
     description:
       "Monitors bid opportunities, project deadlines, license renewals, insurance.",
     schedule: "0 8 * * MON,WED,FRI",
-    tools: ["search_web", "search_memory", "add_memory"],
-    systemPrompt: "Monitor N.E.A. Construction operations and compliance.",
+    tools: ["search_emails", "search_web", "search_memory", "add_memory"],
+    systemPrompt:
+      "Monitor N.E.A. Construction operations. Check emails for bid responses and project updates, search the web for new bid opportunities, and review compliance deadlines from memory.",
     enabled: true,
   },
   {

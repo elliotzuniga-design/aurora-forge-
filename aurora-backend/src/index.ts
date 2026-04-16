@@ -5,6 +5,8 @@ import { chatRoutes } from "./routes/chat.js";
 import { healthRoutes } from "./routes/health.js";
 import { memoryRoutes } from "./routes/memory.js";
 import { agentRoutes } from "./routes/agents.js";
+import { calendarRoutes } from "./routes/calendar.js";
+import { goalRoutes } from "./routes/goals.js";
 import { registerPushToken } from "./services/push.js";
 import { startScheduler } from "./services/scheduler.js";
 import type { FastifyRequest, FastifyReply } from "fastify";
@@ -75,6 +77,8 @@ async function main(): Promise<void> {
   await app.register(healthRoutes, { prefix: "/health" });
   await app.register(memoryRoutes, { prefix: "/memory" });
   await app.register(agentRoutes, { prefix: "/agents" });
+  await app.register(calendarRoutes);
+  await app.register(goalRoutes, { prefix: "/goals" });
 
   // ─── Start Server ─────────────────────────────────────────
 

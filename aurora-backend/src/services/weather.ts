@@ -43,18 +43,33 @@ export async function getWeather(location: string): Promise<string> {
     );
 
     if (!currentRes.ok) {
-      const err = await currentRes.json();
+      const err = (await currentRes.json()) as { message?: string };
       return JSON.stringify({ error: err.message || "Weather lookup failed" });
     }
 
-    const current = await currentRes.json();
+    const current = (await currentRes.json()) as {
+      name: string;
+      sys?: { country?: string };
+      main: { temp: number; feels_like: number; humidity: number };
+      wind: { speed: number };
+      weather: WeatherCondition[];
+    };
 
     // Get 5-day / 3-hour forecast
     const forecastRes = await fetch(
       `${BASE_URL}/forecast?q=${encodeURIComponent(location)}&units=imperial&appid=${OPENWEATHER_API_KEY}&cnt=8`
     );
 
-    const forecastData = forecastRes.ok ? await forecastRes.json() : null;
+    const forecastData = forecastRes.ok
+      ? ((await forecastRes.json()) as {
+          list: Array<{
+            dt_txt: string;
+            main: { temp: number };
+            weather: WeatherCondition[];
+            pop: number;
+          }>;
+        })
+      : null;
 
     const result: WeatherResult = {
       current: {

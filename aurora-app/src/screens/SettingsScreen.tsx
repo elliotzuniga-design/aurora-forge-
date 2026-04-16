@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,18 +8,87 @@ import {
   Alert,
   Switch,
   Platform,
+  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
+import type { StackNavigationProp } from "@react-navigation/stack";
 import { colors } from "../constants/colors";
 import { signOut } from "../services/auth";
 import { useUserStore } from "../store/userStore";
 import { API_BASE_URL } from "../constants/api";
+import { syncHealthData } from "../services/health";
+import api from "../services/api";
+import type { RootStackParamList } from "../../App";
 
 export function SettingsScreen() {
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const { user } = useUserStore();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [proactiveAlerts, setProactiveAlerts] = useState(true);
+  const [googleConnected, setGoogleConnected] = useState(false);
+  const [healthSyncing, setHealthSyncing] = useState(false);
+
+  const checkGoogleStatus = useCallback(async () => {
+    try {
+      const res = await api.get("/calendar/status");
+      setGoogleConnected(res.data.connected);
+    } catch {
+      // Server may not be reachable
+    }
+  }, []);
+
+  useEffect(() => {
+    checkGoogleStatus();
+  }, [checkGoogleStatus]);
+
+  const connectGoogle = async () => {
+    try {
+      const res = await api.get("/calendar/auth");
+      await Linking.openURL(res.data.authUrl);
+      // Re-check status after a delay (user will be redirected back)
+      setTimeout(checkGoogleStatus, 5000);
+    } catch (err) {
+      Alert.alert("Error", "Failed to start Google connection");
+    }
+  };
+
+  const disconnectGoogle = () => {
+    Alert.alert(
+      "Disconnect Google",
+      "This will remove Calendar & Gmail access. Aurora won't be able to check your calendar or emails.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Disconnect",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await api.delete("/calendar/disconnect");
+              setGoogleConnected(false);
+            } catch {
+              Alert.alert("Error", "Failed to disconnect");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleHealthSync = async () => {
+    setHealthSyncing(true);
+    const success = await syncHealthData();
+    setHealthSyncing(false);
+    if (success) {
+      Alert.alert("Synced", "Health data synced to Aurora");
+    } else {
+      Alert.alert(
+        "Sync Issue",
+        "Could not read health data. Make sure HealthKit access is enabled."
+      );
+    }
+  };
 
   const handleSignOut = async () => {
     Alert.alert("Sign Out", "Are you sure you want to sign out of Aurora?", [
@@ -104,6 +173,72 @@ export function SettingsScreen() {
               }
             />
           </View>
+        </View>
+
+        {/* Integrations */}
+        <Text style={styles.sectionTitle}>INTEGRATIONS</Text>
+        <View style={styles.card}>
+          <View style={styles.row}>
+            <Text style={styles.label}>Google Calendar & Gmail</Text>
+            {googleConnected ? (
+              <TouchableOpacity onPress={disconnectGoogle}>
+                <View style={styles.statusBadge}>
+                  <View style={styles.statusDot} />
+                  <Text style={styles.statusText}>Connected</Text>
+                </View>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={styles.connectButton}
+                onPress={connectGoogle}
+              >
+                <Text style={styles.connectButtonText}>Connect</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          <TouchableOpacity
+            style={styles.row}
+            onPress={handleHealthSync}
+            disabled={healthSyncing}
+          >
+            <Text style={styles.label}>Apple Health</Text>
+            <Text style={styles.value}>
+              {healthSyncing ? "Syncing..." : "Sync Now"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Quick Links */}
+        <Text style={styles.sectionTitle}>AURORA</Text>
+        <View style={styles.card}>
+          <TouchableOpacity
+            style={styles.row}
+            onPress={() => navigation.navigate("Goals")}
+          >
+            <Text style={styles.label}>Goals</Text>
+            <Text style={styles.value}>→</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.row}
+            onPress={() => navigation.navigate("Health")}
+          >
+            <Text style={styles.label}>Health Dashboard</Text>
+            <Text style={styles.value}>→</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.row}
+            onPress={() => navigation.navigate("Memory")}
+          >
+            <Text style={styles.label}>Memory Browser</Text>
+            <Text style={styles.value}>→</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.row}
+            onPress={() => navigation.navigate("Agents")}
+          >
+            <Text style={styles.label}>Agents</Text>
+            <Text style={styles.value}>→</Text>
+          </TouchableOpacity>
         </View>
 
         {/* About */}
@@ -215,6 +350,19 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 14,
     color: colors.success,
+  },
+  connectButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: colors.primary + "20",
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  connectButtonText: {
+    fontSize: 13,
+    color: colors.primary,
+    fontWeight: "600",
   },
   signOutButton: {
     backgroundColor: "rgba(239, 68, 68, 0.1)",

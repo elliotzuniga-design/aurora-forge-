@@ -8,6 +8,9 @@ import { getFirestore } from "../middleware/auth.js";
 import { searchMemories, addMemory } from "./memory.js";
 import { getWeather } from "./weather.js";
 import { searchWeb } from "./search.js";
+import { getCalendarEvents } from "./calendar.js";
+import { searchEmails } from "./email.js";
+import { getHealthData, getHealthRange, getHealthTrend } from "./health-query.js";
 import { sendPushNotification } from "./push.js";
 import type { Agent, AgentAction, AgentLog } from "../types/index.js";
 import { v4 as uuid } from "uuid";
@@ -95,6 +98,44 @@ const AGENT_TOOLS: Tool[] = [
       required: ["start_date", "end_date"],
     },
   },
+  {
+    name: "search_emails",
+    description: "Search Gmail inbox using Gmail search syntax.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        query: { type: "string", description: "Gmail search query" },
+        max_results: { type: "number", description: "Max results (default 15)" },
+      },
+      required: ["query"],
+    },
+  },
+  {
+    name: "get_health_data",
+    description: "Get health metrics — daily data, date range, or trend a specific metric.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        date: { type: "string", description: "Single date (YYYY-MM-DD)" },
+        start_date: { type: "string", description: "Range start (YYYY-MM-DD)" },
+        end_date: { type: "string", description: "Range end (YYYY-MM-DD)" },
+        metric: { type: "string", description: "Specific metric to trend" },
+        trend_days: { type: "number", description: "Days to trend (default 7)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "get_goals",
+    description: "Get the user's life goals and progress.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        domain: { type: "string", description: "Optional domain filter" },
+      },
+      required: [],
+    },
+  },
 ];
 
 // ─── Agent Tool Execution ─────────────────────────────────────
@@ -133,10 +174,51 @@ async function executeAgentTool(
       return searchWeb(input.query as string);
 
     case "get_calendar_events":
-      return JSON.stringify({
-        events: [],
-        note: "Calendar integration coming in Phase 3",
-      });
+      return getCalendarEvents(
+        uid,
+        input.start_date as string,
+        input.end_date as string
+      );
+
+    case "search_emails":
+      return searchEmails(
+        uid,
+        input.query as string,
+        (input.max_results as number) || 15
+      );
+
+    case "get_health_data": {
+      if (input.metric) {
+        return getHealthTrend(uid, input.metric as string, (input.trend_days as number) || 7);
+      }
+      if (input.start_date && input.end_date) {
+        return getHealthRange(uid, input.start_date as string, input.end_date as string);
+      }
+      const date = (input.date as string) || new Date().toISOString().split("T")[0];
+      return getHealthData(uid, date);
+    }
+
+    case "get_goals": {
+      const db = getFirestore();
+      let goalsQuery = db
+        .collection("users")
+        .doc(uid)
+        .collection("goals")
+        .orderBy("priority", "asc");
+
+      if (input.domain) {
+        goalsQuery = db
+          .collection("users")
+          .doc(uid)
+          .collection("goals")
+          .where("domain", "==", input.domain)
+          .orderBy("priority", "asc");
+      }
+
+      const goalsSnap = await goalsQuery.get();
+      const goals = goalsSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      return JSON.stringify({ goals, count: goals.length });
+    }
 
     default:
       return JSON.stringify({ error: `Unknown tool: ${toolName}` });

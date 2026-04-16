@@ -10,6 +10,8 @@ import { ConversationsScreen } from "./src/screens/ConversationsScreen";
 import { SettingsScreen } from "./src/screens/SettingsScreen";
 import { MemoryScreen } from "./src/screens/MemoryScreen";
 import { AgentsScreen } from "./src/screens/AgentsScreen";
+import { GoalsScreen } from "./src/screens/GoalsScreen";
+import { HealthScreen } from "./src/screens/HealthScreen";
 import { LoginScreen } from "./src/screens/LoginScreen";
 
 import { useUserStore } from "./src/store/userStore";
@@ -23,6 +25,8 @@ export type RootStackParamList = {
   Settings: undefined;
   Memory: undefined;
   Agents: undefined;
+  Goals: undefined;
+  Health: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -68,6 +72,16 @@ function AppNavigator() {
       <Stack.Screen
         name="Agents"
         component={AgentsScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Goals"
+        component={GoalsScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Health"
+        component={HealthScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>
