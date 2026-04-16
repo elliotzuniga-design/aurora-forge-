@@ -7,6 +7,7 @@ import { searchWeb } from "./search.js";
 import { getCalendarEvents } from "./calendar.js";
 import { searchEmails } from "./email.js";
 import { getHealthData, getHealthRange, getHealthTrend } from "./health-query.js";
+import { sendMessage } from "./messaging.js";
 import type {
   ConversationMessage,
   ToolUseRecord,
@@ -261,10 +262,12 @@ async function executeTool(
       );
 
     case "send_message":
-      return JSON.stringify({
-        status: "queued",
-        note: `Message to ${input.to} via ${input.method} queued`,
-      });
+      return sendMessage(
+        uid,
+        input.to as string,
+        input.message as string,
+        (input.method as "sms" | "push") || "push"
+      );
 
     case "search_memory": {
       const results = await searchMemories(

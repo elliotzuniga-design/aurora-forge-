@@ -213,16 +213,9 @@ export function SettingsScreen() {
         <View style={styles.card}>
           <TouchableOpacity
             style={styles.row}
-            onPress={() => navigation.navigate("Goals")}
+            onPress={() => navigation.navigate("Profile")}
           >
-            <Text style={styles.label}>Goals</Text>
-            <Text style={styles.value}>→</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.row}
-            onPress={() => navigation.navigate("Health")}
-          >
-            <Text style={styles.label}>Health Dashboard</Text>
+            <Text style={styles.label}>Edit Profile</Text>
             <Text style={styles.value}>→</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -230,13 +223,6 @@ export function SettingsScreen() {
             onPress={() => navigation.navigate("Memory")}
           >
             <Text style={styles.label}>Memory Browser</Text>
-            <Text style={styles.value}>→</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.row}
-            onPress={() => navigation.navigate("Agents")}
-          >
-            <Text style={styles.label}>Agents</Text>
             <Text style={styles.value}>→</Text>
           </TouchableOpacity>
         </View>
