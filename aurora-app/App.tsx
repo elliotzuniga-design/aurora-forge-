@@ -15,6 +15,7 @@ import { GoalsScreen } from "./src/screens/GoalsScreen";
 import { HealthScreen } from "./src/screens/HealthScreen";
 import { ProfileScreen } from "./src/screens/ProfileScreen";
 import { LoginScreen } from "./src/screens/LoginScreen";
+import { ErrorBoundary } from "./src/components/ErrorBoundary";
 
 import { useUserStore } from "./src/store/userStore";
 import { onAuthChange } from "./src/services/auth";
@@ -238,6 +239,7 @@ export default function App() {
   }
 
   return (
+    <ErrorBoundary>
     <SafeAreaProvider>
       <NavigationContainer
         theme={{
@@ -262,6 +264,7 @@ export default function App() {
       </NavigationContainer>
       <StatusBar style="light" />
     </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }
 

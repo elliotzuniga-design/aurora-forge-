@@ -1,0 +1,44 @@
+version: "3.8"
+
+services:
+  aurora-backend:
+    build: ./aurora-backend
+    container_name: aurora-backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    env_file:
+      - ./aurora-backend/.env
+    depends_on:
+      chromadb:
+        condition: service_healthy
+    environment:
+      - CHROMA_HOST=http://chromadb:8000
+    networks:
+      - aurora
+
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: aurora-chromadb
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma-data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aurora
+
+volumes:
+  chroma-data:
+
+networks:
+  aurora:
+    driver: bridge
