@@ -9,6 +9,8 @@
     "lint": "eslint src/"
   },
   "dependencies": {
+    "@react-native-voice/voice": "^3.2.4",
+    "@react-navigation/bottom-tabs": "^7.18.16",
     "@react-navigation/native": "^7.0.14",
     "@react-navigation/stack": "^7.2.0",
     "axios": "^1.7.9",
@@ -23,12 +25,11 @@
     "react": "18.3.1",
     "react-native": "0.76.7",
     "react-native-gesture-handler": "~2.20.2",
+    "react-native-markdown-display": "^7.0.2",
     "react-native-reanimated": "~3.16.7",
     "react-native-safe-area-context": "4.12.0",
     "react-native-screens": "~4.5.0",
-    "react-native-markdown-display": "^7.0.2",
-    "zustand": "^5.0.3",
-    "@react-native-voice/voice": "^3.2.4"
+    "zustand": "^5.0.3"
   },
   "devDependencies": {
     "@types/react": "~18.3.18",

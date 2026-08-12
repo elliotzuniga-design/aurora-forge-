@@ -1,109 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { getFirestore } from "../middleware/auth.js";
-import type { Agent } from "../types/index.js";
-
-// Default agent definitions — Phase 4 adds full implementation
-const DEFAULT_AGENTS: Omit<Agent, "lastRun" | "lastResult">[] = [
-  {
-    id: "morning-briefing",
-    name: "Morning Briefing",
-    description:
-      "Pulls today's calendar, weather, pending tasks, and health data into a morning brief.",
-    schedule: "0 6 * * *",
-    tools: [
-      "get_calendar_events",
-      "get_weather",
-      "search_memory",
-      "send_push_notification",
-    ],
-    systemPrompt: "Generate a concise morning briefing for Elliot.",
-    enabled: true,
-  },
-  {
-    id: "communication-monitor",
-    name: "Communication Monitor",
-    description: "Scans for emails and messages that need response or action.",
-    schedule: "*/30 8-20 * * *",
-    tools: ["search_emails", "search_memory", "send_push_notification", "add_memory"],
-    systemPrompt: "Monitor communications and alert on important items.",
-    enabled: true,
-  },
-  {
-    id: "financial-watch",
-    name: "Financial Watch",
-    description:
-      "Monitors transactions, upcoming bills, and financial anomalies.",
-    schedule: "0 8 * * *",
-    tools: ["search_web", "search_memory", "add_memory", "send_push_notification"],
-    systemPrompt: "Monitor financial activity and alert on important items.",
-    enabled: true,
-  },
-  {
-    id: "pen-factory-ops",
-    name: "Pen Factory Operations",
-    description:
-      "Reviews open work orders, vendor responses, and project deadlines.",
-    schedule: "0 7 * * MON",
-    tools: [
-      "search_emails",
-      "search_memory",
-      "get_calendar_events",
-      "add_memory",
-      "send_push_notification",
-    ],
-    systemPrompt: "Generate a weekly operations summary for Pen Factory work.",
-    enabled: true,
-  },
-  {
-    id: "sports-coaching",
-    name: "Sports Coaching",
-    description:
-      "Checks game schedules, pulls game notes, suggests practice focus areas.",
-    schedule: "0 17 * * FRI",
-    tools: [
-      "search_memory",
-      "search_web",
-      "get_calendar_events",
-      "send_push_notification",
-    ],
-    systemPrompt: "Prepare weekend game and practice briefing.",
-    enabled: true,
-  },
-  {
-    id: "health-insight",
-    name: "Health Insight",
-    description:
-      "Reviews daily health data and provides end-of-day health insights.",
-    schedule: "0 21 * * *",
-    tools: ["search_memory", "add_memory", "send_push_notification"],
-    systemPrompt: "Analyze today's health data and provide insights.",
-    enabled: true,
-  },
-  {
-    id: "contractor-ops",
-    name: "N.E.A. Construction Ops",
-    description:
-      "Monitors bid opportunities, project deadlines, license renewals, insurance.",
-    schedule: "0 8 * * MON,WED,FRI",
-    tools: [
-      "search_emails",
-      "search_memory",
-      "add_memory",
-      "send_push_notification",
-    ],
-    systemPrompt: "Monitor N.E.A. Construction operations and compliance.",
-    enabled: true,
-  },
-  {
-    id: "deep-research",
-    name: "Deep Research",
-    description: "On-demand multi-step research on any topic.",
-    schedule: "", // on-demand only
-    tools: ["search_web", "fetch_url", "search_memory", "add_memory"],
-    systemPrompt: "Conduct thorough research and return a structured briefing.",
-    enabled: true,
-  },
-];
+import { getAgentDefinitions, triggerAgent } from "../services/agentRunner.js";
 
 export async function agentRoutes(app: FastifyInstance): Promise<void> {
   // GET /agents — list all agents with status
@@ -113,7 +10,8 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
       const uid = (request as FastifyRequest & { uid: string }).uid;
       const db = getFirestore();
 
-      // Get agent state from Firestore (overrides + last run info)
+      const agents = getAgentDefinitions();
+
       const stateSnapshot = await db
         .collection("users")
         .doc(uid)
@@ -125,17 +23,18 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
         stateMap.set(doc.id, doc.data());
       }
 
-      const agents = DEFAULT_AGENTS.map((agent) => {
+      const agentsWithState = agents.map((agent) => {
         const state = stateMap.get(agent.id) || {};
         return {
           ...agent,
           enabled: (state.enabled as boolean) ?? agent.enabled,
           lastRun: state.lastRun || null,
           lastResult: state.lastResult || null,
+          lastDurationMs: state.lastDurationMs || null,
         };
       });
 
-      return reply.send({ agents });
+      return reply.send({ agents: agentsWithState });
     }
   );
 
@@ -175,28 +74,20 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
       const uid = (request as FastifyRequest & { uid: string }).uid;
       const { id } = request.params;
 
-      const agent = DEFAULT_AGENTS.find((a) => a.id === id);
-      if (!agent) {
-        return reply.status(404).send({ error: `Agent '${id}' not found` });
+      try {
+        const log = await triggerAgent(id, uid);
+        return reply.send({
+          status: log.success ? "completed" : "failed",
+          agentId: log.agentId,
+          agentName: log.agentName,
+          summary: log.summary,
+          actionsCount: log.actions.length,
+          timestamp: log.timestamp,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return reply.status(404).send({ error: message });
       }
-
-      // Mark as running
-      const db = getFirestore();
-      await db
-        .collection("users")
-        .doc(uid)
-        .collection("agentState")
-        .doc(id)
-        .set({ lastRun: new Date(), lastResult: "Running..." }, { merge: true });
-
-      // TODO: Phase 4 — actually run the agent via AgentRunner
-      // For now, acknowledge the trigger
-      return reply.send({
-        status: "triggered",
-        agentId: id,
-        agentName: agent.name,
-        note: "Full agent execution coming in Phase 4",
-      });
     }
   );
 

@@ -17,6 +17,7 @@
     "expo-server-sdk": "^3.13.0",
     "fastify": "^5.2.1",
     "firebase-admin": "^13.0.2",
+    "mqtt": "^5.15.2",
     "node-cron": "^3.0.3",
     "uuid": "^11.1.0"
   },

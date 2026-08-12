@@ -2,13 +2,17 @@ import React, { useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { View, ActivityIndicator, StyleSheet } from "react-native";
+import { View, ActivityIndicator, StyleSheet, Text } from "react-native";
 
 import { HomeScreen } from "./src/screens/HomeScreen";
 import { SettingsScreen } from "./src/screens/SettingsScreen";
 import { MemoryScreen } from "./src/screens/MemoryScreen";
 import { AgentsScreen } from "./src/screens/AgentsScreen";
+import { HealthScreen } from "./src/screens/HealthScreen";
+import { FinancialScreen } from "./src/screens/FinancialScreen";
+import { StrategyScreen } from "./src/screens/StrategyScreen";
 import { LoginScreen } from "./src/screens/LoginScreen";
 
 import { useUserStore } from "./src/store/userStore";
@@ -17,13 +21,82 @@ import { registerForPushNotifications } from "./src/services/notifications";
 import { colors } from "./src/constants/colors";
 
 export type RootStackParamList = {
-  Home: undefined;
-  Settings: undefined;
+  Main: undefined;
   Memory: undefined;
   Agents: undefined;
 };
 
+export type TabParamList = {
+  Home: undefined;
+  Health: undefined;
+  Financial: undefined;
+  Strategy: undefined;
+  Settings: undefined;
+};
+
 const Stack = createStackNavigator<RootStackParamList>();
+const Tab = createBottomTabNavigator<TabParamList>();
+
+function TabIcon({ label, focused }: { label: string; focused: boolean }) {
+  return (
+    <Text
+      style={{
+        fontSize: 10,
+        fontWeight: focused ? "700" : "400",
+        color: focused ? colors.primary : colors.textMuted,
+      }}
+    >
+      {label}
+    </Text>
+  );
+}
+
+function MainTabs() {
+  return (
+    <Tab.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: colors.background,
+          borderTopColor: colors.border,
+          borderTopWidth: 1,
+          paddingBottom: 4,
+          paddingTop: 4,
+          height: 52,
+        },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textMuted,
+        tabBarLabelStyle: { fontSize: 11, fontWeight: "500" },
+      }}
+    >
+      <Tab.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{ tabBarLabel: "Aurora" }}
+      />
+      <Tab.Screen
+        name="Health"
+        component={HealthScreen}
+        options={{ tabBarLabel: "Health" }}
+      />
+      <Tab.Screen
+        name="Financial"
+        component={FinancialScreen}
+        options={{ tabBarLabel: "Finances" }}
+      />
+      <Tab.Screen
+        name="Strategy"
+        component={StrategyScreen}
+        options={{ tabBarLabel: "Strategy" }}
+      />
+      <Tab.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{ tabBarLabel: "Settings" }}
+      />
+    </Tab.Navigator>
+  );
+}
 
 function AppNavigator() {
   return (
@@ -44,13 +117,8 @@ function AppNavigator() {
       }}
     >
       <Stack.Screen
-        name="Home"
-        component={HomeScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="Settings"
-        component={SettingsScreen}
+        name="Main"
+        component={MainTabs}
         options={{ headerShown: false }}
       />
       <Stack.Screen
@@ -75,7 +143,6 @@ export default function App() {
       setUser(user);
 
       if (user) {
-        // Register for push notifications once authenticated
         await registerForPushNotifications().catch(console.error);
       }
     });
